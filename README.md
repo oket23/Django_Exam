@@ -1,4 +1,4 @@
-﻿# FitFlow - Fitness & Nutrition Tracker 🏋️‍♂️
+﻿# FitFlow - Fitness & Nutrition Tracker
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-4.2+-092E20?style=flat-square&logo=django&logoColor=white)
