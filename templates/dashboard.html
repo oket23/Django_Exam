@@ -3,6 +3,13 @@
 
 {% block content %}
 <div class="dashboard-wrapper">
+    <div class="date-navigator card"
+         style="display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; margin-bottom: 25px;">
+        <button id="btnPrevDate" class="btn-primary" style="margin: 0; width: auto; background: #333;">&lt;</button>
+        <h3 id="displayDate" style="margin: 0; border: none; font-size: 18px; color: #fff;">Сьогодні</h3>
+        <button id="btnNextDate" class="btn-primary" style="margin: 0; width: auto; background: #333;">&gt;</button>
+    </div>
+
     <div class="top-stats-grid">
         <div class="stat-card blue">
             <div class="stat-icon">💧</div>
@@ -17,11 +24,11 @@
             <div class="stat-content">
                 <p class="stat-label">Спалено</p>
                 <h2 id="card_burned">--</h2>
-                <small>ккал сьогодні</small>
+                <small>ккал за день</small>
             </div>
         </div>
         <div class="stat-card orange">
-            <div class="stat-icon">🍗</div>
+            <div class="stat-icon">🍎</div>
             <div class="stat-content">
                 <p class="stat-label">Спожито</p>
                 <h2 id="card_consumed">--</h2>
@@ -38,7 +45,16 @@
         </div>
     </div>
 
-    <div class="card macros-header-card">
+    <div class="card chart-main-container">
+        <div class="card-header-flex">
+            <h3 style="border-bottom: none; margin: 0;">Статистика ваги</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="weightChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card macros-header-card" style="margin-top: -10px;">
         <div class="macros-header-grid">
             <div class="macro-item">
                 <span class="macro-label">Білки</span>
@@ -55,17 +71,8 @@
         </div>
     </div>
 
-    <div class="card chart-main-container">
-        <div class="card-header-flex">
-            <h3 style="border-bottom: none; margin: 0;">Статистика ваги</h3>
-        </div>
-        <div class="chart-wrapper">
-            <canvas id="weightChart"></canvas>
-        </div>
-    </div>
-
-    <div class="card workout-section">
-        <h3 style="border-bottom: none; margin-top: 0;">Історія за сьогодні</h3>
+    <div class="card workout-section" style="margin-top: 20px;">
+        <h3 style="border-bottom: none; margin-top: 0;">Історія за обрану дату</h3>
         <div class="table-responsive">
             <table class="history-table">
                 <thead>
@@ -100,15 +107,15 @@
 
 <div id="modalFood" class="modal">
     <div class="modal-content">
-        <span class="close-btn" id="closeFood">&times;</span>
+        <span class="close-btn">&times;</span>
         <h3 id="modalFoodTitle" style="margin-top:0;">Додати прийом їжі</h3>
         <form id="formFood">
-            <input type="text" id="food_name" placeholder="Назва (наприклад: Гречка з куркою)" required>
-            <input type="number" id="food_cal" placeholder="Калорії (ккал)" required>
+            <input type="text" id="food_name" placeholder="Назва" required>
+            <input type="number" id="food_cal" placeholder="Калорії" required>
             <div style="display: flex; gap: 10px;">
-                <input type="number" id="food_p" placeholder="Білки (г)" value="0">
-                <input type="number" id="food_f" placeholder="Жири (г)" value="0">
-                <input type="number" id="food_c" placeholder="Вуглеводи (г)" value="0">
+                <input type="number" id="food_p" placeholder="Білки" value="0">
+                <input type="number" id="food_f" placeholder="Жири" value="0">
+                <input type="number" id="food_c" placeholder="Вуглеводи" value="0">
             </div>
             <button type="submit" id="submitFoodBtn" class="btn-primary">ЗБЕРЕГТИ</button>
         </form>
@@ -117,27 +124,42 @@
 
 <div id="modalActivity" class="modal">
     <div class="modal-content">
-        <span class="close-btn" id="closeActivity">&times;</span>
+        <span class="close-btn">&times;</span>
         <h3 id="modalActivityTitle" style="margin-top:0;">Додати тренування</h3>
         <form id="formActivity">
             <div class="form-group">
-                <label>Тип активності</label>
+                <label>Тип</label>
                 <select id="act_type" required>
-                    <option value="gym">Тренажерний зал (Силове)</option>
-                    <option value="streetball">Стрітбол/Баскетбол</option>
-                    <option value="cardio">Кардіо (Біг/Велосипед)</option>
-                    <option value="other">Інша активність (Ходьба)</option>
+                    <option value="gym">Тренажерний зал</option>
+                    <option value="streetball">Стрітбол</option>
+                    <option value="cardio">Кардіо</option>
+                    <option value="other">Інше</option>
                 </select>
             </div>
             <div class="form-group">
-                <label>Тривалість (хвилин)</label>
-                <input type="number" id="act_duration" placeholder="Наприклад: 60" required>
+                <label>Тривалість (хв)</label>
+                <input type="number" id="act_duration" required>
             </div>
             <button type="submit" id="submitActivityBtn" class="btn-primary" style="background: #9b59b6;">ЗБЕРЕГТИ
             </button>
         </form>
     </div>
 </div>
+
+<div id="customConfirmModal" class="modal">
+    <div class="modal-content" style="text-align: center; max-width: 300px;">
+        <h3 style="margin-top: 0; color: #e74c3c;">Підтвердження</h3>
+        <p>Ви дійсно хочете видалити цей запис?</p>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button id="btnConfirmDelete" class="btn-primary" style="background: #e74c3c; margin: 0; flex: 1;">
+                Видалити
+            </button>
+            <button id="btnCancelDelete" class="btn-primary" style="background: #555; margin: 0; flex: 1;">Скасувати
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}

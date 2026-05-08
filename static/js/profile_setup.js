@@ -1,34 +1,16 @@
 ﻿document.addEventListener("DOMContentLoaded", function() {
 
-    // Надійна функція отримання токена
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
     function calculateBMI(weight, height) {
         if (!weight || !height || height === 0) return "--";
         const hMeters = height / 100;
         return (weight / (hMeters * hMeters)).toFixed(1);
     }
 
-    // 1. ЗАВАНТАЖЕННЯ ДАНИХ
     fetch('/api/profile/')
         .then(res => res.json())
         .then(data => {
-            console.log("Дані отримано:", data); // Для відладки в консолі
+            console.log("Дані отримано:", data);
 
-            // Заповнюємо текстові блоки зверху
             const fullName = (data.first_name || 'Користувач') + ' ' + (data.last_name || '');
             document.getElementById('display_full_name').innerText = fullName;
             document.getElementById('display_weight').innerText = data.current_weight || '--';
@@ -36,7 +18,6 @@
             document.getElementById('display_age').innerText = data.age || '--';
             document.getElementById('display_bmi').innerText = calculateBMI(data.current_weight, data.height);
 
-            // Заповнюємо поля форми знизу
             document.getElementById('first_name').value = data.first_name || '';
             document.getElementById('last_name').value = data.last_name || '';
             document.getElementById('gender').value = data.gender || 'M';
@@ -52,7 +33,6 @@
             showToast("Не вдалося завантажити дані профілю", "error");
         });
 
-    // 2. ЗБЕРЕЖЕННЯ ДАНИХ
     document.getElementById('profileForm').onsubmit = function(e) {
         e.preventDefault();
 
@@ -62,7 +42,6 @@
         const heightVal = parseFloat(document.getElementById('height').value);
         const goal = document.getElementById('goal').value;
 
-        // Валідація
         if (heightVal < 50 || heightVal > 300) return showToast('Введіть реальний зріст', 'error');
         if (goal === 'cut' && tarWeight >= curWeight) return showToast('Цільова вага має бути меншою за поточну', 'error');
         if (goal === 'bulk' && tarWeight <= curWeight) return showToast('Цільова вага має бути більшою за поточну', 'error');
@@ -78,7 +57,6 @@
             activity_level: document.getElementById('activity_level').value
         };
 
-        // Записуємо вагу в лог, потім оновлюємо профіль
         fetch('/api/weight/', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},

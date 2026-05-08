@@ -1,6 +1,8 @@
 ﻿document.addEventListener("DOMContentLoaded", function() {
 
-    function getCookie(name) {
+    const $ = (id) => document.getElementById(id);
+
+    function getToken(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -15,44 +17,60 @@
         return cookieValue;
     }
 
-    const csrftoken = getCookie('csrftoken');
-    const todayStr = new Date().toISOString().split('T')[0];
+    const csrftoken = getToken('csrftoken');
 
+    let viewDate = new Date();
     let chartInstance = null;
     let editState = { type: null, id: null };
     let deleteState = { type: null, id: null };
 
+    function getFormattedDate(dateObj) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function updateDateLabel() {
+        const today = new Date();
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const viewDateOnly = new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate());
+
+        const diffDays = Math.round((todayDateOnly - viewDateOnly) / (1000 * 60 * 60 * 24));
+        const dateDisplay = $('displayDate');
+
+        if (dateDisplay) {
+            if (diffDays === 0) dateDisplay.innerText = "Сьогодні";
+            else if (diffDays === 1) dateDisplay.innerText = "Вчора";
+            else dateDisplay.innerText = viewDate.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+        }
+    }
+
     function loadDashboard() {
-        fetch('/api/dashboard/')
+        const dateStr = getFormattedDate(viewDate);
+        updateDateLabel();
+
+        fetch(`/api/dashboard/?date=${dateStr}`)
             .then(res => res.ok ? res.json() : Promise.reject('Не авторизовано'))
             .then(data => {
-                if (data.profile && data.profile.is_complete === false) {
+                if (data.profile && data.profile.is_complete === false && typeof showToast === 'function') {
                     showToast('Будь ласка, заповни профіль для точних розрахунків', 'error');
                 }
 
-                // 1. ЗАПОВНЕННЯ КАРТОК
-                document.getElementById('card_water').innerText = `${data.today_summary.consumed_water} мл`;
-                document.getElementById('card_water_goal').innerText = `ціль: ${data.dynamic_goals_today.target_water} мл`;
+                const safeSet = (id, val) => { if($(id)) $(id).innerText = val; };
 
-                document.getElementById('card_burned').innerText = `${data.today_summary.burned_calories}`;
+                safeSet('card_water', `${data.today_summary.consumed_water} мл`);
+                safeSet('card_water_goal', `ціль: ${data.dynamic_goals_today.target_water} мл`);
+                safeSet('card_burned', `${data.today_summary.burned_calories}`);
+                safeSet('card_consumed', `${data.today_summary.consumed_calories}`);
+                safeSet('card_cal_goal', `ціль: ${data.dynamic_goals_today.target_calories} ккал`);
+                safeSet('card_weight', `${data.profile.current_weight || '--'}`);
 
-                document.getElementById('card_consumed').innerText = `${data.today_summary.consumed_calories}`;
-                document.getElementById('card_cal_goal').innerText = `ціль: ${data.dynamic_goals_today.target_calories} ккал`;
+                const pCurr = $('curr_p'), pGoal = $('goal_p');
+                const fCurr = $('curr_f'), fGoal = $('goal_f');
+                const cCurr = $('curr_c'), cGoal = $('goal_c');
 
-                document.getElementById('card_weight').innerText = `${data.profile.current_weight || '--'}`;
-
-                // ==========================================
-                // НОВИЙ КОД: ЗАПОВНЕННЯ БЛОКУ МАКРОНУТРІЄНТІВ (БЖВ)
-                // ==========================================
-                const pCurr = document.getElementById('curr_p');
-                const pGoal = document.getElementById('goal_p');
-                const fCurr = document.getElementById('curr_f');
-                const fGoal = document.getElementById('goal_f');
-                const cCurr = document.getElementById('curr_c');
-                const cGoal = document.getElementById('goal_c');
-
-                if (pCurr) {
-                    // Встановлюємо значення (округлюємо для кращого вигляду)
+                if (pCurr && pGoal && fCurr && fGoal && cCurr && cGoal) {
                     pCurr.innerText = Math.round(data.today_summary.consumed_protein);
                     pGoal.innerText = Math.round(data.dynamic_goals_today.target_protein);
                     fCurr.innerText = Math.round(data.today_summary.consumed_fat);
@@ -60,282 +78,217 @@
                     cCurr.innerText = Math.round(data.today_summary.consumed_carbs);
                     cGoal.innerText = Math.round(data.dynamic_goals_today.target_carbs);
 
-                    // Логіка кольору: червоний якщо > норми, зелений якщо <=
                     const checkColor = (curr, goal, el) => {
-                        if (curr > goal) {
-                            el.classList.add('text-danger');
-                            el.classList.remove('text-success');
-                        } else {
-                            el.classList.add('text-success');
-                            el.classList.remove('text-danger');
-                        }
+                        el.classList.toggle('text-danger', curr > goal);
+                        el.classList.toggle('text-success', curr <= goal);
                     };
-
                     checkColor(data.today_summary.consumed_protein, data.dynamic_goals_today.target_protein, pCurr);
                     checkColor(data.today_summary.consumed_fat, data.dynamic_goals_today.target_fat, fCurr);
                     checkColor(data.today_summary.consumed_carbs, data.dynamic_goals_today.target_carbs, cCurr);
                 }
-                // ==========================================
 
-                // 2. ЗАПОВНЕННЯ ТАБЛИЦІ ІСТОРІЇ
                 let tableHTML = '';
-
-                // Їжа
-                if (data.logs_today && data.logs_today.food && data.logs_today.food.length > 0) {
+                if (data.logs_today.food.length) {
                     data.logs_today.food.forEach(item => {
+                        const safeName = item.meal_name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                         tableHTML += `<tr>
                             <td><strong style="color:#e67e22;">🍔 Їжа</strong></td>
-                            <td>${item.meal_name}</td>
-                            <td>${item.calories} ккал</td>
+                            <td>${item.meal_name}</td><td>${item.calories} ккал</td>
                             <td>
-                                <span class="action-link text-edit" onclick="openEditFood(${item.id}, '${item.meal_name.replace(/'/g, "\\'")}', ${item.calories}, ${item.protein}, ${item.fats}, ${item.carbs})">Ред</span>
+                                <span class="action-link text-edit" onclick="openEditFood(${item.id}, '${safeName}', ${item.calories}, ${item.protein || 0}, ${item.fats || 0}, ${item.carbs || 0})">Ред</span>
                                 <span class="action-link text-delete" onclick="confirmDelete('food', ${item.id})">Видалити</span>
-                            </td>
-                        </tr>`;
+                            </td></tr>`;
                     });
                 }
-
-                // Тренування
-                if (data.logs_today && data.logs_today.activity && data.logs_today.activity.length > 0) {
+                if (data.logs_today.activity.length) {
                     data.logs_today.activity.forEach(item => {
                         let typeUa = item.activity_type === 'gym' ? 'Силове' : (item.activity_type === 'cardio' ? 'Кардіо' : 'Інше');
                         tableHTML += `<tr>
                             <td><strong style="color:#9b59b6;">🏃 Тренування</strong></td>
-                            <td>${typeUa} (${item.duration_minutes} хв)</td>
-                            <td style="color: #2ecc71;">+${item.calories_burned} ккал</td>
+                            <td>${typeUa} (${item.duration_minutes} хв)</td><td style="color: #2ecc71;">+${item.calories_burned} ккал</td>
                             <td>
                                 <span class="action-link text-edit" onclick="openEditActivity(${item.id}, '${item.activity_type}', ${item.duration_minutes})">Ред</span>
                                 <span class="action-link text-delete" onclick="confirmDelete('activity', ${item.id})">Видалити</span>
-                            </td>
-                        </tr>`;
+                            </td></tr>`;
                     });
                 }
-
-                // Вода
-                if (data.logs_today && data.logs_today.water && data.logs_today.water.length > 0) {
+                if (data.logs_today.water.length) {
                     data.logs_today.water.forEach(item => {
                         tableHTML += `<tr>
                             <td><strong style="color:#3498db;">💧 Вода</strong></td>
-                            <td>Вживання води</td>
-                            <td>${item.amount_ml} мл</td>
-                            <td>
-                                <span class="action-link text-delete" onclick="confirmDelete('water', ${item.id})">Видалити</span>
-                            </td>
+                            <td>Вживання води</td><td>${item.amount_ml} мл</td>
+                            <td><span class="action-link text-delete" onclick="confirmDelete('water', ${item.id})">Видалити</span></td>
                         </tr>`;
                     });
                 }
+                if (!tableHTML) tableHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Поки що немає записів за цю дату</td></tr>';
+                const tBody = $('history-table-body');
+                if(tBody) tBody.innerHTML = tableHTML;
 
-                if (tableHTML === '') {
-                    tableHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Поки що немає записів за сьогодні</td></tr>';
-                }
-
-                document.getElementById('history-table-body').innerHTML = tableHTML;
-
-                // 3. ГРАФІК ВАГИ
                 const history = data.charts.weight_history;
-                if (history && history.length > 0) {
-                    const labels = history.map(item => item.date);
-                    const weights = history.map(item => parseFloat(item.weight));
-
-                    Chart.defaults.color = '#b0b0b0';
-                    Chart.defaults.borderColor = '#333';
-
-                    const ctx = document.getElementById('weightChart').getContext('2d');
-                    if (chartInstance) chartInstance.destroy();
-
-                    chartInstance = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: [{
-                                label: 'Вага тіла (кг)',
-                                data: weights,
-                                borderColor: '#2ecc71',
-                                backgroundColor: 'rgba(46, 204, 113, 0.2)',
-                                borderWidth: 4,
-                                pointBackgroundColor: '#fff',
-                                pointBorderColor: '#2ecc71',
-                                pointRadius: 5,
-                                fill: true,
-                                tension: 0.4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: {
-                                y: {
-                                    min: Math.min(...weights) - 2,
-                                    max: Math.max(...weights) + 2,
-                                    grid: { color: '#333' }
-                                },
-                                x: { grid: { display: false } }
-                            }
-                        }
-                    });
+                if (history && history.length > 0 && typeof Chart !== 'undefined') {
+                    const canvas = $('weightChart');
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        if (chartInstance) chartInstance.destroy();
+                        chartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: history.map(i => i.date),
+                                datasets: [{ label: 'Вага (кг)', data: history.map(i => parseFloat(i.weight)), borderColor: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.2)', borderWidth: 4, pointBackgroundColor: '#fff', pointRadius: 5, fill: true, tension: 0.4 }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: Math.min(...history.map(i => parseFloat(i.weight))) - 2, max: Math.max(...history.map(i => parseFloat(i.weight))) + 2 } } }
+                        });
+                    }
                 }
             })
-            .catch(err => {
-                document.querySelector('.container').innerHTML = `<div class="card" style="text-align: center;"><h2 style="color: #e74c3c;">Необхідна авторизація</h2><a href="/login/" class="btn-primary" style="display:inline-block; width:auto;">Увійти</a></div>`;
-            });
+            .catch(err => console.error("Помилка завантаження дашборду:", err));
     }
 
-    loadDashboard();
+    $('btnPrevDate')?.addEventListener('click', () => { viewDate.setDate(viewDate.getDate() - 1); loadDashboard(); });
+    $('btnNextDate')?.addEventListener('click', () => { viewDate.setDate(viewDate.getDate() + 1); loadDashboard(); });
 
-    // ... решта логіки модальних вікон залишається без змін ...
-    const modalChoice = document.getElementById('modalActionChoice');
-    const modalFood = document.getElementById('modalFood');
-    const modalActivity = document.getElementById('modalActivity');
-    const customConfirm = document.getElementById('customConfirmModal');
+    const modalChoice = $('modalActionChoice');
+    const modalFood = $('modalFood');
+    const modalActivity = $('modalActivity');
+    const customConfirm = $('customConfirmModal');
 
-    const mainFabBtn = document.getElementById('mainAddBtn');
-    if (mainFabBtn) {
-        mainFabBtn.onclick = () => { modalChoice.style.display = 'flex'; };
-    }
+    $('mainAddBtn')?.addEventListener('click', () => { if(modalChoice) modalChoice.style.display = 'flex'; });
 
-    document.getElementById('btnChoiceFood').onclick = () => {
-        modalChoice.style.display = 'none';
+    $('btnChoiceFood')?.addEventListener('click', () => {
+        if(modalChoice) modalChoice.style.display = 'none';
         editState = { type: null, id: null };
-        document.getElementById('formFood').reset();
-        document.getElementById('modalFoodTitle').innerText = 'Додати прийом їжі';
-        document.getElementById('submitFoodBtn').innerText = 'ЗБЕРЕГТИ';
-        modalFood.style.display = 'flex';
-    };
+        $('formFood')?.reset();
+        if($('modalFoodTitle')) $('modalFoodTitle').innerText = 'Додати прийом їжі';
+        if($('submitFoodBtn')) $('submitFoodBtn').innerText = 'ЗБЕРЕГТИ';
+        if(modalFood) modalFood.style.display = 'flex';
+    });
 
-    document.getElementById('btnChoiceActivity').onclick = () => {
-        modalChoice.style.display = 'none';
+    $('btnChoiceActivity')?.addEventListener('click', () => {
+        if(modalChoice) modalChoice.style.display = 'none';
         editState = { type: null, id: null };
-        document.getElementById('formActivity').reset();
-        document.getElementById('modalActivityTitle').innerText = 'Додати тренування';
-        document.getElementById('submitActivityBtn').innerText = 'ЗБЕРЕГТИ';
-        modalActivity.style.display = 'flex';
-    };
+        $('formActivity')?.reset();
+        if($('modalActivityTitle')) $('modalActivityTitle').innerText = 'Додати тренування';
+        if($('submitActivityBtn')) $('submitActivityBtn').innerText = 'ЗБЕРЕГТИ';
+        if(modalActivity) modalActivity.style.display = 'flex';
+    });
 
-    document.getElementById('closeChoice').onclick = () => { modalChoice.style.display = 'none'; };
-    document.getElementById('closeFood').onclick = () => { modalFood.style.display = 'none'; };
-    document.getElementById('closeActivity').onclick = () => { modalActivity.style.display = 'none'; };
+    window.addEventListener('click', (e) => {
+        if ([modalChoice, modalFood, modalActivity, customConfirm].includes(e.target) && e.target !== null) {
+            e.target.style.display = 'none';
+        }
+    });
 
-    window.onclick = (e) => {
-        if (e.target === modalChoice) modalChoice.style.display = 'none';
-        if (e.target === modalFood) modalFood.style.display = 'none';
-        if (e.target === modalActivity) modalActivity.style.display = 'none';
-        if (e.target === customConfirm) customConfirm.style.display = 'none';
-    };
+    document.querySelectorAll('.close-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            if(modal) modal.style.display = 'none';
+        });
+    });
 
-    // ... функції редагування та видалення ...
-    window.openEditFood = function(id, name, cal, p, f, c) {
+    window.openEditFood = (id, name, cal, p, f, c) => {
         editState = { type: 'food', id: id };
-        document.getElementById('food_name').value = name;
-        document.getElementById('food_cal').value = cal;
-        document.getElementById('food_p').value = p;
-        document.getElementById('food_f').value = f;
-        document.getElementById('food_c').value = c;
-        document.getElementById('modalFoodTitle').innerText = 'Редагувати їжу';
-        document.getElementById('submitFoodBtn').innerText = 'ОНОВИТИ';
-        modalFood.style.display = 'flex';
+        if($('food_name')) $('food_name').value = name;
+        if($('food_cal')) $('food_cal').value = cal;
+        if($('food_p')) $('food_p').value = p || 0;
+        if($('food_f')) $('food_f').value = f || 0;
+        if($('food_c')) $('food_c').value = c || 0;
+        if($('modalFoodTitle')) $('modalFoodTitle').innerText = 'Редагувати їжу';
+        if($('submitFoodBtn')) $('submitFoodBtn').innerText = 'ОНОВИТИ';
+        if (modalFood) modalFood.style.display = 'flex';
     };
 
-    window.openEditActivity = function(id, type, duration) {
+    window.openEditActivity = (id, type, duration) => {
         editState = { type: 'activity', id: id };
-        document.getElementById('act_type').value = type;
-        document.getElementById('act_duration').value = duration;
-        document.getElementById('modalActivityTitle').innerText = 'Редагувати тренування';
-        document.getElementById('submitActivityBtn').innerText = 'ОНОВИТИ';
-        modalActivity.style.display = 'flex';
+        if($('act_type')) $('act_type').value = type;
+        if($('act_duration')) $('act_duration').value = duration;
+        if($('modalActivityTitle')) $('modalActivityTitle').innerText = 'Редагувати тренування';
+        if($('submitActivityBtn')) $('submitActivityBtn').innerText = 'ОНОВИТИ';
+        if (modalActivity) modalActivity.style.display = 'flex';
     };
 
-    window.confirmDelete = function(type, id) {
+    window.confirmDelete = (type, id) => {
         deleteState = { type: type, id: id };
-        customConfirm.style.display = 'flex';
+        if (customConfirm) {
+            customConfirm.style.display = 'flex';
+        } else {
+            if (confirm("Видалити запис?")) executeDelete();
+        }
     };
 
-    document.getElementById('btnCancelDelete').onclick = () => {
-        customConfirm.style.display = 'none';
-        deleteState = { type: null, id: null };
-    };
-
-    document.getElementById('btnConfirmDelete').onclick = () => {
+    function executeDelete() {
         if (!deleteState.id) return;
         fetch(`/api/${deleteState.type}/${deleteState.id}/`, {
             method: 'DELETE',
             headers: { 'X-CSRFToken': csrftoken }
         }).then(res => {
             if (res.ok) {
-                showToast('Запис видалено');
-                customConfirm.style.display = 'none';
+                if (typeof showToast === 'function') showToast('Запис видалено');
+                if (customConfirm) customConfirm.style.display = 'none';
                 loadDashboard();
-            } else {
-                showToast('Помилка при видаленні', 'error');
             }
         });
-    };
+    }
 
-    // ... відправка даних ...
-    document.getElementById('btnFastWater').onclick = function() {
+    $('btnConfirmDelete')?.addEventListener('click', executeDelete);
+    $('btnCancelDelete')?.addEventListener('click', () => { if (customConfirm) customConfirm.style.display = 'none'; });
+
+    $('btnFastWater')?.addEventListener('click', () => {
         fetch('/api/water/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-            body: JSON.stringify({ amount_ml: 250, date: todayStr })
+            body: JSON.stringify({ amount_ml: 250, date: getFormattedDate(viewDate) })
         }).then(res => {
             if (res.ok) {
-                showToast('Додано 250 мл води');
-                modalChoice.style.display = 'none';
+                if (typeof showToast === 'function') showToast('Додано 250 мл води');
+                if (modalChoice) modalChoice.style.display = 'none';
                 loadDashboard();
-            } else { showToast('Помилка додавання', 'error'); }
+            }
         });
-    };
+    });
 
-    document.getElementById('formFood').onsubmit = function(e) {
+    $('formFood')?.addEventListener('submit', (e) => {
         e.preventDefault();
-        const body = {
-            date: todayStr,
-            meal_name: document.getElementById('food_name').value,
-            calories: document.getElementById('food_cal').value,
-            protein: document.getElementById('food_p').value || 0,
-            fats: document.getElementById('food_f').value || 0,
-            carbs: document.getElementById('food_c').value || 0
-        };
-
         const url = editState.id ? `/api/food/${editState.id}/` : '/api/food/';
-        const method = editState.id ? 'PATCH' : 'POST';
-
         fetch(url, {
-            method: method,
+            method: editState.id ? 'PATCH' : 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                date: getFormattedDate(viewDate),
+                meal_name: $('food_name') ? $('food_name').value : '',
+                calories: $('food_cal') ? $('food_cal').value : 0,
+                protein: $('food_p') ? $('food_p').value || 0 : 0,
+                fats: $('food_f') ? $('food_f').value || 0 : 0,
+                carbs: $('food_c') ? $('food_c').value || 0 : 0
+            })
         }).then(res => {
             if (res.ok) {
-                showToast('Збережено успішно');
-                modalFood.style.display = 'none';
-                document.getElementById('formFood').reset();
+                if (typeof showToast === 'function') showToast('Збережено');
+                if (modalFood) modalFood.style.display = 'none';
                 loadDashboard();
-            } else { showToast('Помилка', 'error'); }
+            }
         });
-    };
+    });
 
-    document.getElementById('formActivity').onsubmit = function(e) {
+    $('formActivity')?.addEventListener('submit', (e) => {
         e.preventDefault();
-        const body = {
-            date: todayStr,
-            activity_type: document.getElementById('act_type').value,
-            duration_minutes: document.getElementById('act_duration').value
-        };
-
         const url = editState.id ? `/api/activity/${editState.id}/` : '/api/activity/';
-        const method = editState.id ? 'PATCH' : 'POST';
-
         fetch(url, {
-            method: method,
+            method: editState.id ? 'PATCH' : 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
-            body: JSON.stringify(body)
+            body: JSON.stringify({
+                date: getFormattedDate(viewDate),
+                activity_type: $('act_type') ? $('act_type').value : '',
+                duration_minutes: $('act_duration') ? $('act_duration').value : 0
+            })
         }).then(res => {
             if (res.ok) {
-                showToast('Збережено успішно');
-                modalActivity.style.display = 'none';
-                document.getElementById('formActivity').reset();
+                if (typeof showToast === 'function') showToast('Збережено');
+                if (modalActivity) modalActivity.style.display = 'none';
                 loadDashboard();
-            } else { showToast('Помилка', 'error'); }
+            }
         });
-    };
+    });
+
+    loadDashboard();
 });
