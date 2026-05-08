@@ -1,19 +1,20 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework import generics
-from django.utils import timezone
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import generics, status
 from django.db.models import Sum
+from django.contrib.auth.models import User
+from datetime import date
 
 from .models import Profile, BodyMetricLog, FoodLog, ActivityLog, WaterLog
-from .serializers import ProfileSerializer, BodyMetricSerializer, FoodLogSerializer, ActivityLogSerializer, WaterLogSerializer, BodyMetricCreateSerializer
+from .serializers import ProfileSerializer, BodyMetricSerializer, FoodLogSerializer, ActivityLogSerializer, WaterLogSerializer, BodyMetricCreateSerializer, UserRegistrationSerializer
 
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        today = timezone.now().date()
+        today = date.today()
 
         profile = Profile.objects.get(user=user)
         profile_data = ProfileSerializer(profile).data
@@ -68,12 +69,14 @@ class DashboardAPIView(APIView):
             }
         })
 
+
 class FoodLogCreateView(generics.CreateAPIView):
     serializer_class = FoodLogSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
 
 class ActivityLogCreateView(generics.CreateAPIView):
     serializer_class = ActivityLogSerializer
@@ -82,6 +85,7 @@ class ActivityLogCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
 class WaterLogCreateView(generics.CreateAPIView):
     serializer_class = WaterLogSerializer
     permission_classes = [IsAuthenticated]
@@ -89,9 +93,36 @@ class WaterLogCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
 class BodyMetricCreateView(generics.CreateAPIView):
     serializer_class = BodyMetricCreateSerializer
     permission_classes = [IsAuthenticated]
 
+    def post(self, request, *args, **kwargs):
+        log_date = request.data.get('date', date.today().isoformat())
+
+        instance = BodyMetricLog.objects.filter(user=request.user, date=log_date).first()
+
+        if instance:
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return super().post(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class UserRegistrationView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
+
+class ProfileUpdateView(generics.RetrieveUpdateAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile

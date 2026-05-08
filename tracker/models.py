@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from datetime import date
 
 
 class Profile(models.Model):
@@ -19,7 +20,16 @@ class Profile(models.Model):
         ('active', 'Висока (щодня)'),
     ]
 
+    GENDER_CHOICES = [
+        ('M', 'Чоловік'),
+        ('F', 'Жінка'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='M')
+    birth_date = models.DateField(null=True, blank=True, help_text="Дата народження (YYYY-MM-DD)")
+
     height = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Зріст у см")
     target_weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     goal = models.CharField(max_length=10, choices=GOAL_CHOICES, default='maintain')
@@ -33,6 +43,14 @@ class Profile(models.Model):
         return None
 
     @property
+    def age(self):
+        if self.birth_date:
+            today = date.today()
+            return today.year - self.birth_date.year - (
+                        (today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+        return 25
+
+    @property
     def daily_water_goal(self):
         if self.current_weight:
             return int(float(self.current_weight) * 35)
@@ -40,8 +58,17 @@ class Profile(models.Model):
 
     @property
     def daily_calorie_goal(self):
-        if not self.current_weight:
+        if not self.current_weight or not self.height:
             return 2000
+
+        weight = float(self.current_weight)
+        height = float(self.height)
+        age = self.age
+
+        if self.gender == 'M':
+            bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
+        else:
+            bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161
 
         multipliers = {
             'sedentary': 1.2,
@@ -50,8 +77,6 @@ class Profile(models.Model):
             'active': 1.725
         }
         multiplier = multipliers.get(self.activity_level, 1.375)
-
-        bmr = float(self.current_weight) * 24
 
         tdee = bmr * multiplier
 
@@ -91,6 +116,7 @@ class Profile(models.Model):
     def __str__(self):
         return f"Профіль: {self.user.username}"
 
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
@@ -99,7 +125,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 class BodyMetricLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='body_metrics')
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=date.today)
     weight = models.DecimalField(max_digits=5, decimal_places=2, help_text="Вага в кг")
     body_fat = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, help_text="Відсоток жиру (%)")
 
@@ -113,7 +139,7 @@ class BodyMetricLog(models.Model):
 
 class FoodLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='food_logs')
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=date.today)
     meal_name = models.CharField(max_length=100, help_text="Наприклад: Сніданок, Обід або куряче філе")
     calories = models.PositiveIntegerField()
     protein = models.PositiveIntegerField(default=0)
@@ -140,7 +166,7 @@ class ActivityLog(models.Model):
     }
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=date.today)
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_CHOICES)
     duration_minutes = models.PositiveIntegerField(help_text="Тривалість у хвилинах")
 
@@ -153,9 +179,7 @@ class ActivityLog(models.Model):
                 weight = 70.0
 
             met = self.MET_VALUES.get(self.activity_type, 3.0)
-
             duration_hours = self.duration_minutes / 60.0
-
             self.calories_burned = int(met * float(weight) * duration_hours)
 
         super().save(*args, **kwargs)
@@ -166,7 +190,7 @@ class ActivityLog(models.Model):
 
 class WaterLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='water_logs')
-    date = models.DateField(default=timezone.now)
+    date = models.DateField(default=date.today)
     amount_ml = models.PositiveIntegerField(help_text="Кількість води в мл")
 
     def __str__(self):

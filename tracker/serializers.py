@@ -1,4 +1,5 @@
 ﻿from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Profile, BodyMetricLog, FoodLog, ActivityLog, WaterLog
 
 class BodyMetricSerializer(serializers.ModelSerializer):
@@ -13,11 +14,13 @@ class ProfileSerializer(serializers.ModelSerializer):
     daily_protein_goal = serializers.ReadOnlyField()
     daily_fat_goal = serializers.ReadOnlyField()
     daily_carbs_goal = serializers.ReadOnlyField()
+    age = serializers.ReadOnlyField()
 
     class Meta:
         model = Profile
         fields = [
-            'height', 'target_weight', 'goal', 'current_weight',
+            'gender', 'birth_date', 'height', 'target_weight',
+            'goal', 'activity_level', 'age', 'current_weight',
             'daily_water_goal', 'daily_calorie_goal',
             'daily_protein_goal', 'daily_fat_goal', 'daily_carbs_goal'
         ]
@@ -42,3 +45,18 @@ class BodyMetricCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BodyMetricLog
         fields = ['id', 'date', 'weight', 'body_fat']
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'email']
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data.get('email', '')
+        )
+        return user
