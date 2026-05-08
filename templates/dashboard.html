@@ -1,104 +1,29 @@
-﻿<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>FitFlow Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333; }
-        .container { max-width: 1000px; margin: 0 auto; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        h1 { color: #2c3e50; }
-        h3 { margin-top: 0; color: #34495e; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;}
-        .highlight { font-size: 1.2em; color: #27ae60; font-weight: bold;}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📊 Мій Дашборд (FitFlow)</h1>
+﻿{% extends 'base.html' %}
+{% load static %}
 
-        <div class="stats-grid">
-            <div class="card" id="goals-card">
-                <h3>🎯 Цілі на сьогодні</h3>
-                <p>Завантаження...</p>
-            </div>
+{% block title %}Мій Дашборд | FitFlow{% endblock %}
 
-            <div class="card" id="progress-card">
-                <h3>🔥 Прогрес за день</h3>
-                <p>Завантаження...</p>
-            </div>
+{% block content %}
+    <h1>Огляд прогресу</h1>
+
+    <div class="stats-grid">
+        <div class="card" id="goals-card">
+            <h3>Цілі на сьогодні</h3>
+            <p>Завантаження...</p>
         </div>
 
-        <div class="card">
-            <h3>📈 Історія зміни ваги</h3>
-            <canvas id="weightChart" height="100"></canvas>
+        <div class="card" id="progress-card">
+            <h3>Прогрес за день</h3>
+            <p>Завантаження...</p>
         </div>
     </div>
 
-    <script>
-        // Робимо запит до нашого ідеального бекенду
-        fetch('/api/dashboard/')
-            .then(response => {
-                if (!response.ok) {
-                    document.body.innerHTML = '<div class="container"><div class="card"><h2>⚠️ Помилка доступу</h2><p>Будь ласка, залогінься в панелі адміністратора (<a href="/admin/">/admin/</a>), щоб отримати доступ до дашборду.</p></div></div>';
-                    throw new Error('Не авторизовано');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // 1. Виводимо Цілі
-                document.getElementById('goals-card').innerHTML = `
-                    <h3>🎯 Цілі на сьогодні</h3>
-                    <p>Калорії (з урахуванням тренувань): <span class="highlight">${data.dynamic_goals_today.target_calories} ккал</span></p>
-                    <p>БЖВ: Білки <b>${data.dynamic_goals_today.target_protein}г</b> | Жири <b>${data.dynamic_goals_today.target_fat}г</b> | Вуглеводи <b>${data.dynamic_goals_today.target_carbs}г</b></p>
-                    <p>Норма води: <span class="highlight">${data.dynamic_goals_today.target_water} мл</span></p>
-                `;
+    <div class="card">
+        <h3>Історія зміни ваги</h3>
+        <canvas id="weightChart" height="100"></canvas>
+    </div>
+{% endblock %}
 
-                // 2. Виводимо Прогрес
-                document.getElementById('progress-card').innerHTML = `
-                    <h3>🔥 Прогрес за день</h3>
-                    <p>Спожито їжі: <span class="highlight">${data.today_summary.consumed_calories} ккал</span></p>
-                    <p>Спалено на тренуваннях: <span class="highlight">${data.today_summary.burned_calories} ккал</span></p>
-                    <p>Випито води: <span class="highlight">${data.today_summary.consumed_water} мл</span></p>
-                `;
-
-                // 3. Малюємо красивий графік
-                const history = data.charts.weight_history;
-                // Витягуємо дати для осі X та вагу для осі Y
-                const labels = history.map(item => item.date);
-                const weights = history.map(item => item.weight);
-
-                const ctx = document.getElementById('weightChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Вага тіла (кг)',
-                            data: weights,
-                            borderColor: '#3498db',
-                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
-                            borderWidth: 3,
-                            pointBackgroundColor: '#e74c3c',
-                            pointRadius: 5,
-                            fill: true,
-                            tension: 0.3 // Робить лінію плавною
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: {
-                            y: {
-                                // Графік не буде починатися з нуля, щоб було видно рельєф зміни ваги
-                                min: Math.min(...weights) - 2,
-                                max: Math.max(...weights) + 2
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => console.error('Помилка:', error));
-    </script>
-</body>
-</html>
+{% block scripts %}
+    <script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

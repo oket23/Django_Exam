@@ -5,9 +5,15 @@ from rest_framework import generics, status
 from django.db.models import Sum
 from django.contrib.auth.models import User
 from datetime import date
+from django.contrib.auth import logout
+from django.shortcuts import redirect
 
 from .models import Profile, BodyMetricLog, FoodLog, ActivityLog, WaterLog
 from .serializers import ProfileSerializer, BodyMetricSerializer, FoodLogSerializer, ActivityLogSerializer, WaterLogSerializer, BodyMetricCreateSerializer, UserRegistrationSerializer
+
+def custom_logout(request):
+    logout(request)
+    return redirect('/login/')
 
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]

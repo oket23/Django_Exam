@@ -1,0 +1,36 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Реєстрація | FitFlow{% endblock %}
+
+{% block content %}
+<div class="card login-card">
+    <h2 style="text-align: center;">Створити акаунт</h2>
+    <form id="registerForm">
+        <div class="form-group">
+            <label>Ім'я користувача</label>
+            <input type="text" id="reg_username" required>
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="reg_email" required>
+        </div>
+        <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="reg_password" required>
+        </div>
+        <div class="form-group">
+            <label>Підтвердіть пароль</label>
+            <input type="password" id="reg_confirm_password" required>
+        </div>
+        <button type="submit" class="btn-primary">Зареєструватися</button>
+    </form>
+    <p style="text-align: center; margin-top: 15px;">
+        Вже є акаунт? <a href="{% url 'login' %}" style="color: #2ecc71; text-decoration: none;">Увійти</a>
+    </p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/register.js' %}"></script>
+{% endblock %}
