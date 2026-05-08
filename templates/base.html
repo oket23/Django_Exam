@@ -29,5 +29,30 @@
 
     {% block scripts %}
     {% endblock %}
+
+    <div id="toast-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;"></div>
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? '#2ecc71' : '#e74c3c';
+
+            toast.style.cssText = `
+                background-color: ${bgColor}; color: white;
+                padding: 15px 25px; border-radius: 8px;
+                margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                font-weight: bold; opacity: 0; transform: translateY(20px);
+                transition: all 0.3s ease;
+            `;
+            toast.innerText = message;
+            container.appendChild(toast);
+
+            setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
+            setTimeout(() => {
+                toast.style.opacity = '0'; toast.style.transform = 'translateY(20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 </body>
 </html>

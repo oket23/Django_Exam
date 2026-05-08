@@ -4,50 +4,64 @@
 {% block title %}Налаштування профілю | FitFlow{% endblock %}
 
 {% block content %}
-    <div class="card profile-card">
-        <h2>Налаштування профілю</h2>
-        <form id="profileForm">
-            <div class="form-group">
-                <label>Стать</label>
-                <select id="gender">
-                    <option value="M">Чоловік</option>
-                    <option value="F">Жінка</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Дата народження</label>
-                <input type="date" id="birth_date">
-            </div>
-            <div class="form-group">
-                <label>Зріст (см)</label>
-                <input type="number" id="height" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Цільова вага (кг)</label>
-                <input type="number" id="target_weight" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Ціль</label>
-                <select id="goal">
-                    <option value="cut">Схуднення</option>
-                    <option value="maintain">Підтримка</option>
-                    <option value="bulk">Набір маси</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Активність</label>
-                <select id="activity_level">
-                    <option value="sedentary">Сидячий (без спорту)</option>
-                    <option value="light">Легка (1-3 тренування)</option>
-                    <option value="moderate">Середня (3-5 тренувань)</option>
-                    <option value="active">Висока (щодня)</option>
-                </select>
-            </div>
-            <button type="submit" class="btn-primary">Зберегти та перейти до Дашборду</button>
-        </form>
-    </div>
+<div class="card profile-card">
+    <h2>Налаштування профілю</h2>
+    <form id="profileForm">
+        <div class="form-group">
+            <label>Ім'я</label>
+            <input type="text" id="first_name" placeholder="Наприклад: Oleh">
+        </div>
+        <div class="form-group">
+            <label>Прізвище</label>
+            <input type="text" id="last_name" placeholder="Наприклад: Holub">
+        </div>
+
+        <div class="form-group">
+            <label>Стать</label>
+            <select id="gender">
+                <option value="M">Чоловік</option>
+                <option value="F">Жінка</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="birth_date">Дата народження:</label>
+            <input type="date" id="birth_date" name="birth_date" max="{{ today_date }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="current_weight">Ваша поточна вага (кг):</label>
+            <input type="number" id="current_weight" step="0.1" placeholder="Зараз важу..." required>
+        </div>
+        <div class="form-group">
+            <label>Зріст (см)</label>
+            <input type="number" id="height" step="0.1" required>
+        </div>
+        <div class="form-group">
+            <label>Цільова вага (кг)</label>
+            <input type="number" id="target_weight" step="0.1" required>
+        </div>
+        <div class="form-group">
+            <label>Ціль</label>
+            <select id="goal">
+                <option value="cut">Схуднення</option>
+                <option value="maintain">Підтримка</option>
+                <option value="bulk">Набір маси</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Активність</label>
+            <select id="activity_level">
+                <option value="sedentary">Сидячий (без спорту)</option>
+                <option value="light">Легка (1-3 тренування)</option>
+                <option value="moderate">Середня (3-5 тренувань)</option>
+                <option value="active">Висока (щодня)</option>
+            </select>
+        </div>
+        <button type="submit" class="btn-primary">Зберегти та перейти до Дашборду</button>
+    </form>
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'js/profile_setup.js' %}"></script>
+<script src="{% static 'js/profile_setup.js' %}"></script>
 {% endblock %}

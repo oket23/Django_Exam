@@ -1,26 +1,47 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework import generics, status
-from django.db.models import Sum
-from django.contrib.auth.models import User
-from datetime import date
 from django.contrib.auth import logout
+from django.contrib.auth.models import User
+from django.contrib.auth.views import LoginView
+from django.db.models import Sum
 from django.shortcuts import redirect
+from django.utils import timezone
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Profile, BodyMetricLog, FoodLog, ActivityLog, WaterLog
-from .serializers import ProfileSerializer, BodyMetricSerializer, FoodLogSerializer, ActivityLogSerializer, WaterLogSerializer, BodyMetricCreateSerializer, UserRegistrationSerializer
+from .serializers import (
+    ProfileSerializer, BodyMetricSerializer, FoodLogSerializer,
+    ActivityLogSerializer, WaterLogSerializer, BodyMetricCreateSerializer,
+    UserRegistrationSerializer
+)
+
 
 def custom_logout(request):
     logout(request)
     return redirect('/login/')
+
+
+class UserRegistrationView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
+
+
+class ProfileUpdateView(generics.RetrieveUpdateAPIView):
+    serializer_class = ProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user.profile
+
 
 class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        today = date.today()
+        today = timezone.localdate()
 
         profile = Profile.objects.get(user=user)
         profile_data = ProfileSerializer(profile).data
@@ -105,7 +126,8 @@ class BodyMetricCreateView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        log_date = request.data.get('date', date.today().isoformat())
+        # Виправлено на timezone.localdate!
+        log_date = request.data.get('date', timezone.localdate().isoformat())
 
         instance = BodyMetricLog.objects.filter(user=request.user, date=log_date).first()
 
@@ -121,14 +143,37 @@ class BodyMetricCreateView(generics.CreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class UserRegistrationView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [AllowAny]
-
-class ProfileUpdateView(generics.RetrieveUpdateAPIView):
-    serializer_class = ProfileSerializer
+class FoodLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = FoodLogSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user.profile
+    def get_queryset(self):
+        return FoodLog.objects.filter(user=self.request.user)
+
+
+class ActivityLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = ActivityLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ActivityLog.objects.filter(user=self.request.user)
+
+
+class WaterLogDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WaterLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return WaterLog.objects.filter(user=self.request.user)
+
+
+class CustomLoginView(LoginView):
+    template_name = 'login.html'
+
+    def get_success_url(self):
+        user = self.request.user
+
+        if hasattr(user, 'profile') and user.profile.is_complete:
+            return '/'
+
+        return '/profile/'

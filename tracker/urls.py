@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import (
 )
 
 from .views import DashboardAPIView, FoodLogCreateView, ActivityLogCreateView, WaterLogCreateView, BodyMetricCreateView, \
-    UserRegistrationView, ProfileUpdateView
+    UserRegistrationView, ProfileUpdateView, FoodLogDetailView, ActivityLogDetailView, WaterLogDetailView
 
 urlpatterns = [
     path('register/', UserRegistrationView.as_view(), name='api-register'),
@@ -21,4 +21,8 @@ urlpatterns = [
     path('activity/', ActivityLogCreateView.as_view(), name='api-add-activity'),
     path('water/', WaterLogCreateView.as_view(), name='api-add-water'),
     path('weight/', BodyMetricCreateView.as_view(), name='api-add-weight'),
+
+    path('food/<int:pk>/', FoodLogDetailView.as_view(), name='api-detail-food'),
+    path('activity/<int:pk>/', ActivityLogDetailView.as_view(), name='api-detail-activity'),
+    path('water/<int:pk>/', WaterLogDetailView.as_view(), name='api-detail-water'),
 ]
