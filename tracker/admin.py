@@ -1,5 +1,7 @@
 from django.contrib import admin
+
 from .models import Profile, BodyMetricLog, FoodLog, ActivityLog, WaterLog
+
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):

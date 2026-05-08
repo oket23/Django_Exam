@@ -1,8 +1,26 @@
-from django.db import models
+from datetime import date
+
 from django.contrib.auth.models import User
+from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from datetime import date
+from django.utils import timezone
+from rest_framework.exceptions import ValidationError
+
+
+def validate_birth_date(value):
+    today = timezone.localdate()
+
+    if value > today:
+        raise ValidationError("Дата народження не може бути в майбутньому.")
+
+    if value < date(1900, 1, 1):
+        raise ValidationError("Дата народження занадто давня. Введіть коректну дату.")
+
+    age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
+
+    if age < 10:
+        raise ValidationError("Для користування додатком вам має бути принаймні 10 років.")
 
 
 class Profile(models.Model):
@@ -27,7 +45,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
 
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='M')
-    birth_date = models.DateField(null=True, blank=True, help_text="Дата народження (YYYY-MM-DD)")
+    birth_date = models.DateField(null=True, blank=True, validators=[validate_birth_date])
 
     height = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Зріст у см")
     target_weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -44,9 +62,9 @@ class Profile(models.Model):
     @property
     def age(self):
         if self.birth_date:
-            today = date.today()
+            today = timezone.localdate()
             return today.year - self.birth_date.year - (
-                        (today.month, today.day) < (self.birth_date.month, self.birth_date.day))
+                    (today.month, today.day) < (self.birth_date.month, self.birth_date.day))
         return 25
 
     @property
@@ -112,6 +130,10 @@ class Profile(models.Model):
             return int(remaining_cals / 4)
         return 0
 
+    @property
+    def is_complete(self):
+        return bool(self.birth_date and self.height and self.target_weight)
+
     def __str__(self):
         return f"Профіль: {self.user.username}"
 
@@ -124,7 +146,7 @@ def create_user_profile(sender, instance, created, **kwargs):
 
 class BodyMetricLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='body_metrics')
-    date = models.DateField(default=date.today)
+    date = models.DateField(default=timezone.localdate)
     weight = models.DecimalField(max_digits=5, decimal_places=2, help_text="Вага в кг")
     body_fat = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True, help_text="Відсоток жиру (%)")
 
@@ -138,7 +160,7 @@ class BodyMetricLog(models.Model):
 
 class FoodLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='food_logs')
-    date = models.DateField(default=date.today)
+    date = models.DateField(default=timezone.localdate)
     meal_name = models.CharField(max_length=100, help_text="Наприклад: Сніданок, Обід або куряче філе")
     calories = models.PositiveIntegerField()
     protein = models.PositiveIntegerField(default=0)
@@ -165,7 +187,7 @@ class ActivityLog(models.Model):
     }
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_logs')
-    date = models.DateField(default=date.today)
+    date = models.DateField(default=timezone.localdate)
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_CHOICES)
     duration_minutes = models.PositiveIntegerField(help_text="Тривалість у хвилинах")
 
@@ -174,8 +196,6 @@ class ActivityLog(models.Model):
     def save(self, *args, **kwargs):
         if not self.calories_burned:
             weight = self.user.profile.current_weight
-            if not weight:
-                weight = 70.0
 
             met = self.MET_VALUES.get(self.activity_type, 3.0)
             duration_hours = self.duration_minutes / 60.0
@@ -189,7 +209,7 @@ class ActivityLog(models.Model):
 
 class WaterLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='water_logs')
-    date = models.DateField(default=date.today)
+    date = models.DateField(default=timezone.localdate)
     amount_ml = models.PositiveIntegerField(help_text="Кількість води в мл")
 
     def __str__(self):

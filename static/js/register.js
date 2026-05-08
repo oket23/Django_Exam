@@ -1,4 +1,5 @@
 ﻿document.addEventListener("DOMContentLoaded", function() {
+
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -17,19 +18,18 @@
     document.getElementById('registerForm').onsubmit = function(e) {
         e.preventDefault();
 
-        const username = document.getElementById('reg_username').value;
-        const email = document.getElementById('reg_email').value;
         const password = document.getElementById('reg_password').value;
-        const confirm = document.getElementById('reg_confirm_password').value;
+        const confirmPassword = document.getElementById('reg_confirm_password').value;
 
-        if (password !== confirm) {
-            alert('Паролі не збігаються!');
-            return;
+        if (password !== confirmPassword) {
+            return showToast('Паролі не збігаються!', 'error');
         }
 
         const body = {
-            username: username,
-            email: email,
+            username: document.getElementById('reg_username').value,
+            first_name: document.getElementById('first_name').value,
+            last_name: document.getElementById('last_name').value,
+            email: document.getElementById('reg_email').value,
             password: password
         };
 
@@ -42,15 +42,27 @@
                 'X-CSRFToken': csrftoken
             },
             body: JSON.stringify(body)
-        }).then(res => {
+        })
+        .then(res => {
             if (res.ok) {
-                alert('Реєстрація успішна! Тепер увійдіть.');
-                window.location.href = '/login/';
+                showToast('Реєстрація успішна! Ласкаво просимо.');
+                setTimeout(() => {
+                    window.location.href = '/login/?next=/profile/';
+                }, 1500);
             } else {
                 return res.json().then(err => {
-                    alert('Помилка: ' + JSON.stringify(err));
+                    let errorMsg = 'Помилка при реєстрації.';
+                    if (err.username) {
+                        errorMsg = 'Такий логін вже існує.';
+                    }
+                    showToast(errorMsg, 'error');
+                    console.error(err);
                 });
             }
+        })
+        .catch(err => {
+            showToast('Сталася помилка. Спробуйте пізніше.', 'error');
+            console.error(err);
         });
     };
 });

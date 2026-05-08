@@ -13,6 +13,10 @@
             return response.json();
         })
         .then(data => {
+            if (data.profile && data.profile.is_complete === false) {
+                showToast('Будь ласка, заповни профіль для точних розрахунків', 'error');
+            }
+
             document.getElementById('goals-card').innerHTML = `
                 <h3>Цілі на сьогодні</h3>
                 <p>Калорії: <span class="highlight">${data.dynamic_goals_today.target_calories} ккал</span></p>
@@ -28,40 +32,42 @@
             `;
 
             const history = data.charts.weight_history;
-            const labels = history.map(item => item.date);
-            const weights = history.map(item => item.weight);
+            if (history && history.length > 0) {
+                const labels = history.map(item => item.date);
+                const weights = history.map(item => item.weight);
 
-            Chart.defaults.color = '#b0b0b0';
-            Chart.defaults.borderColor = '#333';
+                Chart.defaults.color = '#b0b0b0';
+                Chart.defaults.borderColor = '#333';
 
-            const ctx = document.getElementById('weightChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Вага тіла (кг)',
-                        data: weights,
-                        borderColor: '#2ecc71',
-                        backgroundColor: 'rgba(46, 204, 113, 0.2)',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#1e1e1e',
-                        pointBorderColor: '#2ecc71',
-                        pointRadius: 5,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            min: Math.min(...weights) - 2,
-                            max: Math.max(...weights) + 2
+                const ctx = document.getElementById('weightChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Вага тіла (кг)',
+                            data: weights,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#1e1e1e',
+                            pointBorderColor: '#2ecc71',
+                            pointRadius: 5,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                min: Math.min(...weights) - 2,
+                                max: Math.max(...weights) + 2
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         })
         .catch(error => console.log('Логіку зупинено:', error));
 });
