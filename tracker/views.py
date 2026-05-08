@@ -49,8 +49,16 @@ class DashboardAPIView(APIView):
         weight_logs = BodyMetricLog.objects.filter(user=user).order_by('date')[:30]
         weight_data = BodyMetricSerializer(weight_logs, many=True).data
 
-        food_today = FoodLog.objects.filter(user=user, date=today).aggregate(total_cal=Sum('calories'))
+        food_today = FoodLog.objects.filter(user=user, date=today).aggregate(
+            total_cal=Sum('calories'),
+            total_p=Sum('protein'),
+            total_f=Sum('fats'),
+            total_c=Sum('carbs')
+        )
         consumed_calories = food_today['total_cal'] or 0
+        consumed_protein = food_today['total_p'] or 0
+        consumed_fat = food_today['total_f'] or 0
+        consumed_carbs = food_today['total_c'] or 0
 
         water_today = WaterLog.objects.filter(user=user, date=today).aggregate(total_water=Sum('amount_ml'))
         consumed_water = water_today['total_water'] or 0
@@ -62,6 +70,15 @@ class DashboardAPIView(APIView):
         burned_calories = activity_today['total_burn'] or 0
         duration_minutes = activity_today['total_duration'] or 0
 
+        food_logs_today = FoodLog.objects.filter(user=user, date=today)
+        water_logs_today = WaterLog.objects.filter(user=user, date=today)
+        activity_logs_today = ActivityLog.objects.filter(user=user, date=today)
+
+        food_data_today = FoodLogSerializer(food_logs_today, many=True).data
+        water_data_today = WaterLogSerializer(water_logs_today, many=True).data
+        activity_data_today = ActivityLogSerializer(activity_logs_today, many=True).data
+
+        # Розрахунок цілей
         base_calories = profile.daily_calorie_goal
         base_carbs = profile.daily_carbs_goal
         base_water = profile.daily_water_goal
@@ -80,6 +97,9 @@ class DashboardAPIView(APIView):
             },
             "today_summary": {
                 "consumed_calories": consumed_calories,
+                "consumed_protein": consumed_protein,
+                "consumed_fat": consumed_fat,
+                "consumed_carbs": consumed_carbs,
                 "burned_calories": burned_calories,
                 "active_minutes": duration_minutes,
                 "net_calories": consumed_calories - burned_calories,
@@ -93,6 +113,11 @@ class DashboardAPIView(APIView):
                 "target_water": adjusted_water,
                 "earned_extra_carbs": earned_carbs,
                 "earned_extra_water": earned_water
+            },
+            "logs_today": {
+                "food": food_data_today,
+                "water": water_data_today,
+                "activity": activity_data_today
             }
         })
 

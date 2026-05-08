@@ -1,29 +1,145 @@
 ﻿{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Мій Дашборд | FitFlow{% endblock %}
-
 {% block content %}
-    <h1>Огляд прогресу</h1>
-
-    <div class="stats-grid">
-        <div class="card" id="goals-card">
-            <h3>Цілі на сьогодні</h3>
-            <p>Завантаження...</p>
+<div class="dashboard-wrapper">
+    <div class="top-stats-grid">
+        <div class="stat-card blue">
+            <div class="stat-icon">💧</div>
+            <div class="stat-content">
+                <p class="stat-label">Вода</p>
+                <h2 id="card_water">--</h2>
+                <small id="card_water_goal">ціль: --</small>
+            </div>
         </div>
-
-        <div class="card" id="progress-card">
-            <h3>Прогрес за день</h3>
-            <p>Завантаження...</p>
+        <div class="stat-card pink">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-content">
+                <p class="stat-label">Спалено</p>
+                <h2 id="card_burned">--</h2>
+                <small>ккал сьогодні</small>
+            </div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon">🍗</div>
+            <div class="stat-content">
+                <p class="stat-label">Спожито</p>
+                <h2 id="card_consumed">--</h2>
+                <small id="card_cal_goal">ціль: --</small>
+            </div>
+        </div>
+        <div class="stat-card cyan">
+            <div class="stat-icon">⚖️</div>
+            <div class="stat-content">
+                <p class="stat-label">Вага</p>
+                <h2 id="card_weight">--</h2>
+                <small>останній замір</small>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <h3>Історія зміни ваги</h3>
-        <canvas id="weightChart" height="100"></canvas>
+    <div class="card macros-header-card">
+        <div class="macros-header-grid">
+            <div class="macro-item">
+                <span class="macro-label">Білки</span>
+                <span class="macro-value"><span id="curr_p">0</span> / <span id="goal_p">0</span> г</span>
+            </div>
+            <div class="macro-item">
+                <span class="macro-label">Жири</span>
+                <span class="macro-value"><span id="curr_f">0</span> / <span id="goal_f">0</span> г</span>
+            </div>
+            <div class="macro-item">
+                <span class="macro-label">Вуглеводи</span>
+                <span class="macro-value"><span id="curr_c">0</span> / <span id="goal_c">0</span> г</span>
+            </div>
+        </div>
     </div>
+
+    <div class="card chart-main-container">
+        <div class="card-header-flex">
+            <h3 style="border-bottom: none; margin: 0;">Статистика ваги</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="weightChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card workout-section">
+        <h3 style="border-bottom: none; margin-top: 0;">Історія за сьогодні</h3>
+        <div class="table-responsive">
+            <table class="history-table">
+                <thead>
+                <tr>
+                    <th>Категорія</th>
+                    <th>Опис</th>
+                    <th>Показник</th>
+                    <th>Дія</th>
+                </tr>
+                </thead>
+                <tbody id="history-table-body">
+                <tr>
+                    <td colspan="4" style="text-align:center; color:#888;">Завантаження...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalActionChoice" class="modal">
+    <div class="modal-content" style="max-width: 300px; text-align: center;">
+        <span class="close-btn" id="closeChoice">&times;</span>
+        <h3 style="margin-top:0;">Що додати?</h3>
+        <div class="action-grid">
+            <button id="btnFastWater" class="btn-primary" style="background: #3498db;">+250 мл Води</button>
+            <button id="btnChoiceFood" class="btn-primary" style="background: #e67e22;">Додати Їжу</button>
+            <button id="btnChoiceActivity" class="btn-primary" style="background: #9b59b6;">Тренування</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalFood" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" id="closeFood">&times;</span>
+        <h3 id="modalFoodTitle" style="margin-top:0;">Додати прийом їжі</h3>
+        <form id="formFood">
+            <input type="text" id="food_name" placeholder="Назва (наприклад: Гречка з куркою)" required>
+            <input type="number" id="food_cal" placeholder="Калорії (ккал)" required>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="food_p" placeholder="Білки (г)" value="0">
+                <input type="number" id="food_f" placeholder="Жири (г)" value="0">
+                <input type="number" id="food_c" placeholder="Вуглеводи (г)" value="0">
+            </div>
+            <button type="submit" id="submitFoodBtn" class="btn-primary">ЗБЕРЕГТИ</button>
+        </form>
+    </div>
+</div>
+
+<div id="modalActivity" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" id="closeActivity">&times;</span>
+        <h3 id="modalActivityTitle" style="margin-top:0;">Додати тренування</h3>
+        <form id="formActivity">
+            <div class="form-group">
+                <label>Тип активності</label>
+                <select id="act_type" required>
+                    <option value="gym">Тренажерний зал (Силове)</option>
+                    <option value="streetball">Стрітбол/Баскетбол</option>
+                    <option value="cardio">Кардіо (Біг/Велосипед)</option>
+                    <option value="other">Інша активність (Ходьба)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Тривалість (хвилин)</label>
+                <input type="number" id="act_duration" placeholder="Наприклад: 60" required>
+            </div>
+            <button type="submit" id="submitActivityBtn" class="btn-primary" style="background: #9b59b6;">ЗБЕРЕГТИ
+            </button>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-    <script src="{% static 'js/dashboard.js' %}"></script>
+<script src="{% static 'js/dashboard.js' %}"></script>
 {% endblock %}

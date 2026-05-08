@@ -1,4 +1,7 @@
-﻿:root {
+﻿/* =========================================
+   1. ЗМІННІ ТА БАЗОВІ СТИЛІ
+========================================= */
+:root {
     --bg: #121212;
     --card: #1e1e1e;
     --accent: #2ecc71;
@@ -15,8 +18,33 @@ body {
     color: var(--text);
     margin: 0;
     padding: 0;
+    padding-bottom: 80px;
 }
 
+.container {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+h1, h2 { color: var(--text); }
+
+h3 {
+    margin-top: 0;
+    color: var(--text-dim);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+}
+
+.highlight {
+    font-size: 1.2em;
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* =========================================
+   2. ВЕРХНЯ НАВІГАЦІЯ (Для неавторизованих)
+========================================= */
 .navbar {
     background: var(--card);
     padding: 15px 30px;
@@ -41,16 +69,11 @@ body {
     transition: color 0.3s ease;
 }
 
-.nav-links a:hover {
-    color: var(--accent);
-}
+.nav-links a:hover { color: var(--accent); }
 
-.container {
-    max-width: 1100px;
-    margin: 30px auto;
-    padding: 0 20px;
-}
-
+/* =========================================
+   3. БАЗОВІ КАРТКИ ТА ФОРМИ
+========================================= */
 .card {
     background: var(--card);
     padding: 25px;
@@ -58,41 +81,14 @@ body {
     border: 1px solid var(--border);
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     margin-bottom: 25px;
-    transition: transform 0.2s ease;
 }
 
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 25px;
-}
-
-h1, h2 {
-    color: var(--text);
-}
-
-h3 {
-    margin-top: 0;
-    color: var(--text-dim);
-    border-bottom: 2px solid var(--border);
-    padding-bottom: 10px;
-}
-
-.highlight {
-    font-size: 1.2em;
-    color: var(--accent);
-    font-weight: bold;
-}
-
-.auth-card, .profile-card, .login-card {
+.auth-card, .login-card {
     max-width: 400px;
     margin: 4rem auto;
 }
 
-.form-group {
-    margin-bottom: 20px;
-}
-
+.form-group { margin-bottom: 20px; }
 .form-group label {
     display: block;
     margin-bottom: 8px;
@@ -119,15 +115,6 @@ input:focus, select:focus {
     box-shadow: 0 0 5px rgba(46, 204, 113, 0.3);
 }
 
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px var(--input-bg) inset !important;
-    -webkit-text-fill-color: var(--text) !important;
-    transition: background-color 5000s ease-in-out 0s;
-}
-
 .btn-primary {
     width: 100%;
     padding: 12px;
@@ -140,8 +127,340 @@ input:-webkit-autofill:active {
     font-weight: bold;
     transition: background 0.3s ease;
     margin-top: 1rem;
+    box-sizing: border-box; /* Вирішує проблему виїзду за межі картки */
 }
 
-.btn-primary:hover {
-    background: var(--accent-hover);
+.btn-primary:hover { background: var(--accent-hover); }
+
+/* =========================================
+   4. НИЖНЯ НАВІГАЦІЯ (Mobile Style)
+========================================= */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1e1e1e;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 70px;
+    border-top: 1px solid #333;
+    z-index: 900;
 }
+
+.nav-item {
+    color: #888;
+    text-decoration: none;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.3s;
+}
+
+.nav-item.active, .nav-item:hover { color: var(--accent); }
+.nav-item svg { width: 24px; height: 24px; fill: currentColor; }
+
+.fab-container {
+    position: relative;
+    top: -25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.fab-btn {
+    background: var(--accent);
+    color: #121212;
+    border: none;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    font-size: 32px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+    transition: transform 0.2s;
+}
+
+.fab-btn:hover { transform: scale(1.1); }
+
+/* =========================================
+   5. МОДАЛЬНІ ВІКНА ТА СПОВІЩЕННЯ (TOAST)
+========================================= */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: var(--card);
+    padding: 2rem;
+    border-radius: 1rem;
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    position: relative;
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px; right: 20px;
+    font-size: 1.5rem;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.close-btn:hover { color: var(--accent); }
+
+.action-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.action-grid button { margin: 0; }
+
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: var(--accent);
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    font-weight: 600;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+}
+
+.toast-error { background: #e74c3c; }
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeOut { to { opacity: 0; } }
+
+/* =========================================
+   6. СТИЛІ ДАШБОРДУ (Gradient Cards & Table)
+========================================= */
+.dashboard-wrapper { padding-top: 10px; }
+
+.top-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.stat-card {
+    padding: 25px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.stat-card.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.stat-card.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.stat-card.orange { background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%); }
+.stat-card.cyan { background: linear-gradient(135deg, #2af598 0%, #009efd 100%); }
+
+.stat-icon {
+    font-size: 35px;
+    background: rgba(255,255,255,0.2);
+    width: 65px;
+    height: 65px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 15px;
+}
+
+.stat-content h2 { margin: 5px 0; font-size: 28px; color: #fff; }
+.stat-label { text-transform: uppercase; font-size: 12px; letter-spacing: 1px; opacity: 0.9; margin: 0; }
+.stat-content small { opacity: 0.8; font-size: 13px; }
+
+.chart-wrapper {
+    height: 300px;
+    width: 100%;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.history-table th {
+    text-align: left;
+    padding: 15px 10px;
+    color: var(--text-dim);
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.history-table td {
+    padding: 15px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 15px;
+}
+
+.history-table tr:hover { background: rgba(255,255,255,0.02); }
+
+.action-link {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    margin-right: 10px;
+    transition: opacity 0.2s;
+}
+.action-link:hover { opacity: 0.7; }
+.text-edit { color: #f1c40f; }
+.text-delete { color: #e74c3c; }
+
+/* =========================================
+   7. СТИЛІ ПРОФІЛЮ (Елітний Дашборд)
+========================================= */
+.profile-dashboard {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-top: 10px;
+}
+
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px !important;
+    background: linear-gradient(135deg, #1e1e1e 0%, #252525 100%) !important;
+}
+
+.user-info-main {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    overflow: hidden;
+}
+
+.avatar-circle img { width: 100%; height: 100%; object-fit: cover; }
+.user-text h2 { margin: 0; font-size: 24px; color: #fff; }
+.user-text p { margin: 5px 0 0; color: var(--text-dim); }
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 25px 0;
+}
+
+.metric-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px !important;
+    min-height: 120px;
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto 15px;
+    font-size: 24px;
+}
+
+.metric-val {
+    font-size: 28px;
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 5px;
+}
+
+.metric-val small { font-size: 14px; color: var(--text-dim); margin-left: 4px; }
+.metric-label { color: var(--text-dim); font-size: 13px; text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 10px;
+}
+.form-row .form-group { flex: 1; }
+
+@media (max-width: 600px) {
+    .form-row { flex-direction: column; gap: 0; }
+}
+
+.macros-header-card {
+    margin-top: -10px; /* Притискаємо блок до графіка зверху */
+    padding: 15px 25px !important;
+}
+
+.macros-header-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    text-align: center;
+}
+
+.macro-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.macro-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+}
+
+.macro-value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Кольори індикації */
+.text-success { color: #2ecc71 !important; }
+.text-danger { color: #e74c3c !important; }
